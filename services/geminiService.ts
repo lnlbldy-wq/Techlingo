@@ -3,9 +3,13 @@ import { AiResponse } from '../types';
 
 // Helper to get AI instance safely when needed
 const getAiClient = () => {
-  // Use the API key from the environment
-  // Using a getter ensures we don't crash at module load time if env is not ready
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === 'undefined') {
+    throw new Error("مفتاح API غير موجود. يرجى التأكد من إضافته في إعدادات Vercel (Environment Variables) وإعادة النشر.");
+  }
+
+  return new GoogleGenAI({ apiKey });
 };
 
 export const fetchTermDefinition = async (term: string): Promise<AiResponse | null> => {
@@ -47,9 +51,9 @@ export const fetchTermDefinition = async (term: string): Promise<AiResponse | nu
       return JSON.parse(response.text) as AiResponse;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching definition from Gemini:", error);
-    return null;
+    throw new Error(error.message || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي");
   }
 };
 
@@ -69,8 +73,8 @@ export const generateCode = async (prompt: string): Promise<string | null> => {
       4. Ensure the code works 100%.`,
     });
     return response.text || null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating code:", error);
-    return null;
+    throw new Error(error.message || "حدث خطأ أثناء توليد الكود");
   }
 };

@@ -5,7 +5,7 @@ import { DetailModal } from './components/DetailModal';
 import { CodeGenerator } from './components/CodeGenerator';
 import { INITIAL_TERMS } from './constants';
 import { Term, TermCategory } from './types';
-import { Search, Sparkles, AlertCircle, Loader2, Bookmark, BookOpen, Terminal } from 'lucide-react';
+import { Search, Sparkles, AlertCircle, Loader2, Bookmark, BookOpen, Terminal, XCircle } from 'lucide-react';
 import { fetchTermDefinition } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTerm, setSelectedTerm] = useState<Term | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Robust localStorage handling to prevent crashes
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -83,6 +84,8 @@ const App: React.FC = () => {
     if (!searchTerm.trim()) return;
     
     setIsSearchingAi(true);
+    setError(null);
+
     try {
       const result = await fetchTermDefinition(searchTerm);
       if (result) {
@@ -100,8 +103,9 @@ const App: React.FC = () => {
         setSelectedTerm(newTerm);
         setIsModalOpen(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch AI term", error);
+      setError(error.message || "عذراً، حدث خطأ في الاتصال. تأكد من اتصال الإنترنت.");
     } finally {
       setIsSearchingAi(false);
     }
@@ -149,7 +153,7 @@ const App: React.FC = () => {
         {activeTab === 'dictionary' ? (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Search Hero */}
-            <div className="mb-8">
+            <div className="mb-4">
               <div className="relative shadow-sm rounded-2xl bg-white overflow-hidden border border-gray-200 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all">
                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
                   <Search size={22} />
@@ -179,6 +183,14 @@ const App: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
+                <XCircle size={20} className="shrink-0" />
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+            )}
 
             {/* Categories */}
             <div className="mb-8 overflow-x-auto no-scrollbar pb-2">
