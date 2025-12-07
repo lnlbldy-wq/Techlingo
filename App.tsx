@@ -71,6 +71,7 @@ const App: React.FC = () => {
     }
 
     // Sort: Favorites first, then alphabetical
+    // IMPORTANT: Create a copy using [...result] before sorting to avoid mutating state directly
     return [...result].sort((a, b) => {
       const aFav = favorites.includes(a.id);
       const bFav = favorites.includes(b.id);
