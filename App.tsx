@@ -71,7 +71,7 @@ const App: React.FC = () => {
     }
 
     // Sort: Favorites first, then alphabetical
-    return result.sort((a, b) => {
+    return [...result].sort((a, b) => {
       const aFav = favorites.includes(a.id);
       const bFav = favorites.includes(b.id);
       if (aFav && !bFav) return -1;
