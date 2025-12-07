@@ -15,9 +15,16 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTerm, setSelectedTerm] = useState<Term | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Robust localStorage handling to prevent crashes
   const [favorites, setFavorites] = useState<string[]>(() => {
-    const saved = localStorage.getItem('techlingo_favs');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('techlingo_favs');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Error parsing favorites:", e);
+      return [];
+    }
   });
   
   const [terms, setTerms] = useState<Term[]>(INITIAL_TERMS);
@@ -26,7 +33,11 @@ const App: React.FC = () => {
 
   // Save favorites
   useEffect(() => {
-    localStorage.setItem('techlingo_favs', JSON.stringify(favorites));
+    try {
+      localStorage.setItem('techlingo_favs', JSON.stringify(favorites));
+    } catch (e) {
+      console.error("Error saving favorites:", e);
+    }
   }, [favorites]);
 
   const toggleFavorite = (termId: string) => {

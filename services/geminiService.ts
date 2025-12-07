@@ -1,11 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiResponse } from '../types';
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to get AI instance safely when needed
+const getAiClient = () => {
+  // Use the API key from the environment
+  // Using a getter ensures we don't crash at module load time if env is not ready
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+};
 
 export const fetchTermDefinition = async (term: string): Promise<AiResponse | null> => {
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Explain the technical term "${term}" for a middle school student in simple Arabic.
@@ -50,6 +55,7 @@ export const fetchTermDefinition = async (term: string): Promise<AiResponse | nu
 
 export const generateCode = async (prompt: string): Promise<string | null> => {
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `You are an expert programmer assistant for students.
