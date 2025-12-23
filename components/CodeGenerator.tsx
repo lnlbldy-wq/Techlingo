@@ -6,7 +6,7 @@ import {
   Terminal, Copy, Check, Loader2, Sparkles, XCircle, 
   Bug, Zap, ChevronDown, AlignRight,
   TrendingUp, ShieldAlert, Eye, Rocket, Layers,
-  Lightbulb, ShieldCheck, Activity, Code2, Cpu
+  Lightbulb, ShieldCheck, Activity, Code2, Cpu, RotateCcw
 } from 'lucide-react';
 
 const LANGUAGES = ['تلقائي', 'Python', 'JavaScript', 'TypeScript', 'Rust', 'Go', 'C++', 'Java', 'C#', 'SQL', 'Swift', 'PHP'];
@@ -38,6 +38,12 @@ export const CodeGenerator: React.FC = () => {
     }
   };
 
+  const resetAll = () => {
+    setPrompt('');
+    setResult(null);
+    setError(null);
+  };
+
   const copyCode = (text?: string) => {
     const codeToCopy = text || (mode === 'evolve' && result?.evolution ? result.evolution[evolutionTab] : result?.code);
     if (codeToCopy) {
@@ -49,7 +55,6 @@ export const CodeGenerator: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20 max-w-5xl mx-auto">
-      {/* Configuration Panel */}
       <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl shadow-indigo-100/50 border border-slate-100">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
           <div className="flex items-center gap-5">
@@ -121,9 +126,20 @@ export const CodeGenerator: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-3 text-emerald-500 font-bold text-sm bg-emerald-50/50 px-4 py-2 rounded-full border border-emerald-100">
-            <ShieldCheck size={16} />
-            <span>بيئة تطوير آمنة ومنعزلة</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 text-emerald-500 font-bold text-sm bg-emerald-50/50 px-4 py-2 rounded-full border border-emerald-100">
+              <ShieldCheck size={16} />
+              <span>بيئة تطوير آمنة</span>
+            </div>
+            {result && (
+               <button 
+                  onClick={resetAll}
+                  className="p-3 text-slate-400 hover:text-indigo-600 bg-slate-50 rounded-xl transition-colors"
+                  title="طلب جديد"
+               >
+                  <RotateCcw size={20} />
+               </button>
+            )}
           </div>
           <button
             onClick={handleSubmit}
@@ -143,12 +159,9 @@ export const CodeGenerator: React.FC = () => {
         </div>
       )}
 
-      {/* Result Section */}
       {(result || isLoading) && (
         <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-500">
-          
           <div className="bg-[#0d1117] rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-800">
-            {/* Terminal Header */}
             <div className="flex items-center justify-between px-8 py-5 bg-[#161b22] border-b border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="flex gap-1.5">

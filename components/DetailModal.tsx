@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Term, TranslationResponse } from '../types';
-import { X, Volume2, BookOpen, Lightbulb, Share2, Star, Sparkles, Globe2, Loader2, Languages } from 'lucide-react';
+import { X, Volume2, BookOpen, Lightbulb, Share2, Star, Sparkles, Globe2, Loader2, Languages, Copy, Check } from 'lucide-react';
 import { translateToEnglish } from '../services/geminiService';
 
 interface DetailModalProps {
@@ -16,12 +16,13 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
   const [translation, setTranslation] = useState<TranslationResponse | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  // Reset state when term changes or modal closes
   useEffect(() => {
     setTranslation(null);
     setError(null);
     setIsTranslating(false);
+    setCopied(false);
   }, [term, isOpen]);
 
   if (!isOpen || !term) return null;
@@ -32,9 +33,32 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
     window.speechSynthesis.speak(utterance);
   };
 
+  const handleCopy = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `تعرف على مصطلح: ${term.term}`,
+          text: `${term.term} (${term.arabicTerm}): ${term.definition}`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      handleCopy(`${term.term} - ${term.definition}`);
+      alert('تم نسخ الرابط لمشاركته');
+    }
+  };
+
   const handleTranslate = async () => {
     if (translation) {
-      setTranslation(null); // Toggle off if already translated
+      setTranslation(null);
       return;
     }
     
@@ -52,16 +76,13 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       ></div>
 
-      {/* Modal Content */}
       <div className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
         
-        {/* Header Background */}
         <div className="h-32 bg-gradient-to-br from-indigo-600 to-primary-700 relative overflow-hidden shrink-0">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-32 blur-2xl"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/20 rounded-full -ml-12 -mb-24 blur-xl"></div>
@@ -74,10 +95,8 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
           </button>
         </div>
 
-        {/* Content Body - Scrollable */}
         <div className="px-8 pb-10 -mt-12 relative overflow-y-auto no-scrollbar">
           
-          {/* Main Term Card */}
           <div className="bg-white rounded-3xl shadow-xl p-8 border border-slate-100 flex items-start justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-3 mb-1">
@@ -85,7 +104,6 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
                 <button 
                   onClick={() => handleSpeak(term.term)}
                   className="text-indigo-500 hover:text-indigo-700 bg-indigo-50 p-2 rounded-xl transition-all hover:scale-110"
-                  title="نطق المصطلح"
                 >
                   <Volume2 size={20} />
                 </button>
@@ -119,22 +137,20 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
               </button>
               
               <button 
-                onClick={handleTranslate}
-                disabled={isTranslating}
+                onClick={() => handleCopy(term.definition)}
                 className={`p-4 rounded-2xl transition-all shadow-sm border ${
-                  translation 
+                  copied 
                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
                     : 'bg-white text-slate-400 hover:text-indigo-600 border-slate-100 hover:border-indigo-100'
                 }`}
-                title="ترجمة الشرح للإنجليزية"
+                title="نسخ الشرح"
               >
-                {isTranslating ? <Loader2 size={28} className="animate-spin" /> : <Languages size={28} />}
+                {copied ? <Check size={28} /> : <Copy size={28} />}
               </button>
             </div>
           </div>
 
           <div className="mt-10 space-y-8">
-            {/* Definition Section */}
             <div className="grid grid-cols-1 gap-4">
               <div className="flex items-start gap-4">
                 <div className="bg-indigo-50 p-3.5 rounded-2xl text-indigo-600 mt-1 shrink-0 shadow-sm">
@@ -157,7 +173,6 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
               </div>
             </div>
 
-            {/* Example Section */}
             <div className="bg-emerald-50 rounded-[2rem] p-8 border border-emerald-100 relative overflow-hidden group">
               <div className="absolute top-0 left-0 w-2 h-full bg-emerald-400"></div>
               <div className="flex items-start gap-5">
@@ -189,9 +204,11 @@ export const DetailModal: React.FC<DetailModalProps> = ({ term, isOpen, onClose,
             </div>
           )}
 
-          {/* Action Footer */}
           <div className="mt-10 flex gap-4">
-             <button className="flex-1 bg-slate-50 text-slate-700 font-black py-5 rounded-2xl hover:bg-slate-100 transition-all flex items-center justify-center gap-3 border border-slate-100 shadow-sm hover:shadow-md">
+             <button 
+                onClick={handleShare}
+                className="flex-1 bg-slate-50 text-slate-700 font-black py-5 rounded-2xl hover:bg-slate-100 transition-all flex items-center justify-center gap-3 border border-slate-100 shadow-sm hover:shadow-md"
+              >
                 <Share2 size={20} />
                 مشاركة المصطلح
              </button>

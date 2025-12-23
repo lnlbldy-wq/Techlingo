@@ -6,7 +6,7 @@ import { DetailModal } from './components/DetailModal';
 import { CodeGenerator } from './components/CodeGenerator';
 import { INITIAL_TERMS } from './constants';
 import { Term, TermCategory } from './types';
-import { Search, Sparkles, Loader2, Bookmark, BookOpen, Terminal, XCircle, Globe2, TrendingUp, Cpu, Info, History } from 'lucide-react';
+import { Search, Sparkles, Loader2, Bookmark, BookOpen, Terminal, XCircle, Globe2, TrendingUp, Cpu, Info, History, X } from 'lucide-react';
 import { fetchTermDefinition } from './services/geminiService';
 
 const SUGGESTIONS = ['Containerization', 'Serverless', 'DevOps', 'Machine Learning', 'Quantum Computing'];
@@ -101,6 +101,11 @@ const App: React.FC = () => {
     }
   };
 
+  const clearSearch = () => {
+    setSearchTerm('');
+    searchInputRef.current?.focus();
+  };
+
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
@@ -108,7 +113,6 @@ const App: React.FC = () => {
       <Header onSearchFocus={() => searchInputRef.current?.focus()} />
 
       <main className="max-w-5xl mx-auto px-4 pt-8">
-        {/* Navigation Tabs */}
         <div className="flex p-1.5 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 mb-12 w-fit mx-auto sticky top-24 z-10 backdrop-blur-xl bg-white/90">
           <button
             onClick={() => setActiveTab('dictionary')}
@@ -136,10 +140,8 @@ const App: React.FC = () => {
 
         {activeTab === 'dictionary' ? (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-            {/* Optimized Search Section */}
             <div className="mb-12 group max-w-4xl mx-auto">
               <div className="relative shadow-2xl shadow-indigo-100/30 rounded-[2.5rem] bg-white overflow-hidden border-2 border-slate-100 focus-within:border-indigo-500 focus-within:ring-8 focus-within:ring-indigo-50 transition-all duration-500">
-                {/* Search Icon at the Start (Right in RTL) */}
                 <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
                   {isSearchingAi ? <Loader2 size={24} className="animate-spin" /> : <Search size={24} />}
                 </div>
@@ -147,22 +149,32 @@ const App: React.FC = () => {
                 <input
                   ref={searchInputRef}
                   type="text"
-                  className="block w-full pr-16 pl-36 py-6 text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none text-xl font-semibold leading-relaxed"
+                  className="block w-full pr-16 pl-48 py-6 text-slate-800 placeholder:text-slate-400 bg-transparent focus:outline-none text-xl font-semibold leading-relaxed"
                   placeholder="ابحث عن أي مصطلح تقني هنا..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && filteredTerms.length === 0 && handleSearchAi()}
+                  onKeyDown={(e) => e.key === 'Enter' && (filteredTerms.length === 0 ? handleSearchAi() : null)}
                 />
 
-                {searchTerm && (
-                  <button 
-                    onClick={handleSearchAi}
-                    className="absolute inset-y-0 left-4 px-6 flex items-center text-indigo-600 font-black text-sm hover:scale-105 transition-transform bg-indigo-50 my-3 rounded-2xl hover:bg-indigo-100 border border-indigo-100 shadow-sm"
-                  >
-                    <Globe2 size={18} className="ml-2" />
-                    بحث عالمي
-                  </button>
-                )}
+                <div className="absolute inset-y-0 left-4 flex items-center gap-2">
+                  {searchTerm && (
+                    <button 
+                      onClick={clearSearch}
+                      className="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 rounded-xl"
+                    >
+                      <X size={20} />
+                    </button>
+                  )}
+                  {searchTerm && (
+                    <button 
+                      onClick={handleSearchAi}
+                      className="px-6 py-3 flex items-center text-indigo-600 font-black text-sm hover:scale-105 transition-transform bg-indigo-50 rounded-2xl hover:bg-indigo-100 border border-indigo-100 shadow-sm"
+                    >
+                      <Globe2 size={18} className="ml-2" />
+                      بحث عالمي
+                    </button>
+                  )}
+                </div>
               </div>
               
               {!searchTerm && (
@@ -179,7 +191,6 @@ const App: React.FC = () => {
               )}
             </div>
 
-            {/* Smart Banner */}
             <div className="mb-10 bg-gradient-to-br from-indigo-50/80 to-blue-50/80 p-6 rounded-[2.5rem] border border-indigo-100/50 flex flex-col md:flex-row items-center justify-between max-w-4xl mx-auto gap-6 shadow-sm">
               <div className="flex items-center gap-5">
                  <div className="bg-white p-3.5 rounded-2xl shadow-sm text-indigo-600">
@@ -203,7 +214,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Categories */}
             <div className="mb-10 overflow-x-auto no-scrollbar">
               <div className="flex gap-3 min-w-max pb-3 px-2 justify-center">
                 {categories.map(cat => (
@@ -222,7 +232,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-24 max-w-5xl mx-auto">
               {filteredTerms.map((term) => (
                 <div key={term.id} className="relative transition-transform hover:scale-[1.01]">
