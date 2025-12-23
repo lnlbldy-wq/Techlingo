@@ -6,7 +6,7 @@ import { DetailModal } from './components/DetailModal';
 import { CodeGenerator } from './components/CodeGenerator';
 import { INITIAL_TERMS } from './constants';
 import { Term, TermCategory } from './types';
-import { Search, Sparkles, Loader2, Bookmark, BookOpen, Terminal, XCircle, Globe2, TrendingUp, Cpu, Info, History, X } from 'lucide-react';
+import { Search, Sparkles, Loader2, BookOpen, Cpu, Globe2, TrendingUp, X, Key } from 'lucide-react';
 import { fetchTermDefinition } from './services/geminiService';
 
 const SUGGESTIONS = ['Containerization', 'Serverless', 'DevOps', 'Machine Learning', 'Quantum Computing'];
@@ -17,18 +17,22 @@ const App: React.FC = () => {
   const [selectedTerm, setSelectedTerm] = useState<Term | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState<boolean>(true); // Assume true until checked
+
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('techlingo_favs');
       return saved ? JSON.parse(saved) : [];
     } catch (e) { return []; }
   });
+  
   const [terms, setTerms] = useState<Term[]>(() => {
     try {
       const saved = localStorage.getItem('techlingo_custom_terms');
       return saved ? [...INITIAL_TERMS, ...JSON.parse(saved)] : INITIAL_TERMS;
     } catch (e) { return INITIAL_TERMS; }
   });
+  
   const [isSearchingAi, setIsSearchingAi] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('الكل');
 
@@ -40,6 +44,26 @@ const App: React.FC = () => {
     const customTerms = terms.filter(t => t.isAiGenerated);
     localStorage.setItem('techlingo_custom_terms', JSON.stringify(customTerms));
   }, [terms]);
+
+  // Check API key for Pro features
+  useEffect(() => {
+    if (activeTab === 'code') {
+      const checkKey = async () => {
+        if (window.aistudio?.hasSelectedApiKey) {
+          const selected = await window.aistudio.hasSelectedApiKey();
+          setHasApiKey(selected);
+        }
+      };
+      checkKey();
+    }
+  }, [activeTab]);
+
+  const handleOpenSelectKey = async () => {
+    if (window.aistudio?.openSelectKey) {
+      await window.aistudio.openSelectKey();
+      setHasApiKey(true); // Proceed after calling open
+    }
+  };
 
   const toggleFavorite = (termId: string) => {
     setFavorites(prev => prev.includes(termId) ? prev.filter(id => id !== termId) : [...prev, termId]);
@@ -85,12 +109,10 @@ const App: React.FC = () => {
           category: result.category as TermCategory || TermCategory.GENERAL,
           isAiGenerated: true
         };
-        
         setTerms(prev => {
           if (prev.some(t => t.term.toLowerCase() === newTerm.term.toLowerCase())) return prev;
           return [newTerm, ...prev];
         });
-        
         setSelectedTerm(newTerm);
         setIsModalOpen(true);
       }
@@ -101,11 +123,6 @@ const App: React.FC = () => {
     }
   };
 
-  const clearSearch = () => {
-    setSearchTerm('');
-    searchInputRef.current?.focus();
-  };
-
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
@@ -113,43 +130,44 @@ const App: React.FC = () => {
       <Header onSearchFocus={() => searchInputRef.current?.focus()} />
 
       <main className="max-w-5xl mx-auto px-4 pt-8">
-        <div className="flex p-1.5 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 mb-12 w-fit mx-auto sticky top-24 z-10 backdrop-blur-xl bg-white/90">
+        {/* Improved Tab Navigation to avoid overlaps */}
+        <div className="flex p-1.5 bg-white rounded-2xl shadow-xl border border-slate-100 mb-10 w-fit mx-auto sticky top-20 z-30 backdrop-blur-md bg-white/90">
           <button
             onClick={() => setActiveTab('dictionary')}
-            className={`flex items-center gap-3 px-10 py-4 rounded-[1.2rem] text-lg font-black transition-all duration-300 ${
+            className={`flex items-center gap-3 px-8 py-3.5 rounded-xl text-base font-black transition-all duration-300 ${
               activeTab === 'dictionary'
-                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200'
+                ? 'bg-indigo-600 text-white shadow-lg'
                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <BookOpen size={24} />
+            <BookOpen size={20} />
             القاموس
           </button>
           <button
             onClick={() => setActiveTab('code')}
-            className={`flex items-center gap-3 px-10 py-4 rounded-[1.2rem] text-lg font-black transition-all duration-300 ${
+            className={`flex items-center gap-3 px-8 py-3.5 rounded-xl text-base font-black transition-all duration-300 ${
               activeTab === 'code'
-                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200'
+                ? 'bg-indigo-600 text-white shadow-lg'
                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Cpu size={24} />
+            <Cpu size={20} />
             المطور
           </button>
         </div>
 
         {activeTab === 'dictionary' ? (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="mb-12 group max-w-4xl mx-auto">
-              <div className="relative shadow-2xl shadow-indigo-100/30 rounded-[2.5rem] bg-white overflow-hidden border-2 border-slate-100 focus-within:border-indigo-500 focus-within:ring-8 focus-within:ring-indigo-50 transition-all duration-500">
-                <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+              <div className="relative shadow-2xl rounded-[2rem] bg-white overflow-hidden border-2 border-slate-100 focus-within:border-indigo-500 transition-all">
+                <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-slate-400">
                   {isSearchingAi ? <Loader2 size={24} className="animate-spin" /> : <Search size={24} />}
                 </div>
                 
                 <input
                   ref={searchInputRef}
                   type="text"
-                  className="block w-full pr-16 pl-48 py-6 text-slate-800 placeholder:text-slate-400 bg-transparent focus:outline-none text-xl font-semibold leading-relaxed"
+                  className="block w-full pr-16 pl-48 py-6 text-slate-800 placeholder:text-slate-400 bg-transparent focus:outline-none text-xl font-bold"
                   placeholder="ابحث عن أي مصطلح تقني هنا..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -159,8 +177,8 @@ const App: React.FC = () => {
                 <div className="absolute inset-y-0 left-4 flex items-center gap-2">
                   {searchTerm && (
                     <button 
-                      onClick={clearSearch}
-                      className="p-2 text-slate-400 hover:text-rose-500 transition-colors bg-slate-50 rounded-xl"
+                      onClick={() => setSearchTerm('')}
+                      className="p-2 text-slate-400 hover:text-rose-500 bg-slate-50 rounded-xl"
                     >
                       <X size={20} />
                     </button>
@@ -168,9 +186,9 @@ const App: React.FC = () => {
                   {searchTerm && (
                     <button 
                       onClick={handleSearchAi}
-                      className="px-6 py-3 flex items-center text-indigo-600 font-black text-sm hover:scale-105 transition-transform bg-indigo-50 rounded-2xl hover:bg-indigo-100 border border-indigo-100 shadow-sm"
+                      className="px-6 py-2.5 flex items-center text-indigo-600 font-black text-sm bg-indigo-50 rounded-xl border border-indigo-100"
                     >
-                      <Globe2 size={18} className="ml-2" />
+                      <Globe2 size={16} className="ml-2" />
                       بحث عالمي
                     </button>
                   )}
@@ -179,11 +197,8 @@ const App: React.FC = () => {
               
               {!searchTerm && (
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                   <span className="text-slate-400 text-xs font-black ml-3 flex items-center gap-2 uppercase tracking-tight">
-                     <TrendingUp size={14} /> مقترحات:
-                   </span>
                   {SUGGESTIONS.map(s => (
-                    <button key={s} onClick={() => setSearchTerm(s)} className="text-xs font-bold text-slate-600 bg-white border border-slate-100 hover:border-indigo-500 hover:text-indigo-600 px-5 py-2.5 rounded-2xl shadow-sm hover:shadow-md transition-all">
+                    <button key={s} onClick={() => setSearchTerm(s)} className="text-xs font-bold text-slate-500 bg-white border border-slate-100 hover:border-indigo-500 hover:text-indigo-600 px-4 py-2 rounded-xl shadow-sm transition-all">
                       {s}
                     </button>
                   ))}
@@ -191,39 +206,16 @@ const App: React.FC = () => {
               )}
             </div>
 
-            <div className="mb-10 bg-gradient-to-br from-indigo-50/80 to-blue-50/80 p-6 rounded-[2.5rem] border border-indigo-100/50 flex flex-col md:flex-row items-center justify-between max-w-4xl mx-auto gap-6 shadow-sm">
-              <div className="flex items-center gap-5">
-                 <div className="bg-white p-3.5 rounded-2xl shadow-sm text-indigo-600">
-                    <Sparkles size={26} />
-                 </div>
-                 <div>
-                    <h4 className="text-slate-900 font-black text-lg">الذكاء الاصطناعي مفعّل</h4>
-                    <p className="text-slate-500 text-sm font-medium">نبحث لك في أحدث الموسوعات العالمية عند عدم توفر المصطلح محلياً.</p>
-                 </div>
-              </div>
-              <div className="flex gap-6 items-center">
-                 <div className="text-center">
-                    <div className="text-indigo-600 font-black text-2xl">{terms.length}</div>
-                    <div className="text-slate-400 text-[11px] font-black uppercase tracking-widest">مصطلح</div>
-                 </div>
-                 <div className="h-10 w-px bg-indigo-100"></div>
-                 <div className="bg-white px-5 py-2.5 rounded-2xl border border-indigo-100 flex items-center gap-2 text-indigo-600 font-black text-sm">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>محدّث الآن</span>
-                 </div>
-              </div>
-            </div>
-
             <div className="mb-10 overflow-x-auto no-scrollbar">
-              <div className="flex gap-3 min-w-max pb-3 px-2 justify-center">
+              <div className="flex gap-2 min-w-max pb-2 justify-center">
                 {categories.map(cat => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-8 py-3.5 rounded-2xl text-xs font-black transition-all border-2 ${
+                    className={`px-6 py-3 rounded-xl text-xs font-black transition-all ${
                       selectedCategory === cat
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-105'
-                        : 'bg-white text-slate-500 border-slate-100 hover:border-indigo-300 shadow-sm'
+                        ? 'bg-slate-900 text-white shadow-lg'
+                        : 'bg-white text-slate-500 border border-slate-100 hover:border-indigo-200 shadow-sm'
                     }`}
                   >
                     {cat}
@@ -234,29 +226,33 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-24 max-w-5xl mx-auto">
               {filteredTerms.map((term) => (
-                <div key={term.id} className="relative transition-transform hover:scale-[1.01]">
-                  <TermCard term={term} onClick={(t) => { setSelectedTerm(t); setIsModalOpen(true); }} />
-                </div>
+                <TermCard key={term.id} term={term} onClick={(t) => { setSelectedTerm(t); setIsModalOpen(true); }} />
               ))}
             </div>
-
-            {filteredTerms.length === 0 && searchTerm && (
-              <div className="text-center py-24 bg-white rounded-[3rem] border-4 border-dashed border-slate-100 max-w-3xl mx-auto shadow-inner">
-                <Globe2 size={64} className="mx-auto text-indigo-200 mb-8 animate-pulse" />
-                <h3 className="text-3xl font-black text-slate-900 mb-6">هل تريد البحث عن "{searchTerm}" عالمياً؟</h3>
-                <button
-                  onClick={handleSearchAi}
-                  disabled={isSearchingAi}
-                  className="bg-indigo-600 text-white px-14 py-6 rounded-[2rem] hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-100 font-black text-xl flex items-center gap-4 mx-auto"
-                >
-                  {isSearchingAi ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
-                  استخدام الذكاء الاصطناعي
-                </button>
-              </div>
-            )}
           </div>
         ) : (
-          <CodeGenerator />
+          !hasApiKey ? (
+            <div className="max-w-2xl mx-auto mt-20 text-center p-12 bg-white rounded-[3rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-500">
+               <div className="bg-amber-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 text-amber-600">
+                  <Key size={48} />
+               </div>
+               <h2 className="text-3xl font-black text-slate-900 mb-4">تفعيل مختبر البرمجة</h2>
+               <p className="text-slate-600 mb-8 leading-relaxed font-medium">
+                 للوصول إلى ميزات المطور المتقدمة (Gemini 3 Pro)، يرجى تفعيل مفتاح الـ API الخاص بك من مشروع مدفوع.
+                 <br />
+                 <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-indigo-600 underline">تعرف على وثائق الفوترة</a>
+               </p>
+               <button 
+                  onClick={handleOpenSelectKey}
+                  className="bg-indigo-600 text-white px-12 py-5 rounded-2xl hover:bg-indigo-700 transition-all shadow-xl font-black text-xl flex items-center gap-3 mx-auto"
+               >
+                  <Sparkles size={24} />
+                  اختر مفتاح API للبدء
+               </button>
+            </div>
+          ) : (
+            <CodeGenerator />
+          )
         )}
       </main>
 

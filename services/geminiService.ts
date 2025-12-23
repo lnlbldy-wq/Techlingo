@@ -3,8 +3,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AiResponse, CodeAiResponse, DevMode, TranslationResponse } from '../types';
 
 /**
- * Creates a new GoogleGenAI instance using the API_KEY from environment variables.
- * Following guidelines to always use named parameter and direct process.env reference.
+ * Creates a new GoogleGenAI instance right before making an API call to ensure 
+ * it always uses the most up-to-date API key from the dialog or environment.
  */
 const getAiClient = () => {
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -15,8 +15,9 @@ export const fetchTermDefinition = async (term: string): Promise<AiResponse | nu
     const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `You are a Senior Technical Architect. Explain: "${term}".
-      Include the English technical name, Arabic definition, and a professional real-world analogy.`,
+      contents: `You are a Senior Technical Architect. Explain the term: "${term}".
+      Return the English technical name, Arabic definition (simple yet professional), and a professional real-world analogy.
+      Ensure the category is one of: عام، برمجة، عتاد، ذكاء اصطناعي، شبكات، سحابة.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -31,11 +32,10 @@ export const fetchTermDefinition = async (term: string): Promise<AiResponse | nu
         },
       },
     });
-    // Use .text property directly as per guidelines
     return response.text ? JSON.parse(response.text) : null;
   } catch (error) {
-    console.error("Gemini Error:", error);
-    throw new Error("فشل الوصول للموسوعة التقنية.");
+    console.error("Gemini Search Error:", error);
+    throw new Error("فشل الوصول للموسوعة العالمية. يرجى التأكد من اتصال الإنترنت.");
   }
 };
 
@@ -44,11 +44,9 @@ export const translateToEnglish = async (term: string, definition: string, examp
     const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Translate the following technical Arabic description of the term "${term}" into professional technical English:
+      contents: `Translate the following technical Arabic description for "${term}" into technical English:
       Definition: ${definition}
-      Example: ${example}
-      
-      Return as JSON with keys 'enDefinition' and 'enExample'.`,
+      Example: ${example}`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -61,11 +59,10 @@ export const translateToEnglish = async (term: string, definition: string, examp
         },
       },
     });
-    // Use .text property directly as per guidelines
     return response.text ? JSON.parse(response.text) : null;
   } catch (error) {
     console.error("Translation Error:", error);
-    throw new Error("فشل في الترجمة.");
+    throw new Error("فشل في استرداد الترجمة الإنجليزية.");
   }
 };
 
@@ -83,7 +80,7 @@ export const processDevCode = async (
     let requiredFields = ["code", "explanation"];
 
     if (mode === 'evolve') {
-      modeInstruction = "Show code evolution in 3 stages: Basic, Optimized, and Enterprise-ready.";
+      modeInstruction = "Provide code evolution in 3 distinct stages: Basic (MVP), Optimized (Fast/Efficient), and Enterprise (Scalable/Secure).";
       extraSchema = {
         evolution: {
           type: Type.OBJECT,
@@ -97,38 +94,26 @@ export const processDevCode = async (
       };
       requiredFields.push("evolution");
     } else if (mode === 'review') {
-      modeInstruction = "Perform a deep code review identifying security, performance, and style issues.";
-      extraSchema = {
-        reviewFeedbacks: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              line: { type: Type.STRING },
-              comment: { type: Type.STRING },
-              type: { type: Type.STRING }
-            },
-            required: ["line", "comment", "type"]
-          }
-        }
-      };
-      requiredFields.push("reviewFeedbacks");
+      modeInstruction = "Perform a security and performance audit on the code. Provide actionable feedback.";
+    } else if (mode === 'fix') {
+      modeInstruction = "Identify and fix logical or syntax errors in the provided snippet.";
+    } else if (mode === 'optimize') {
+      modeInstruction = "Refactor the code for maximum performance and readability.";
     } else {
-      modeInstruction = mode === 'fix' ? "Fix bugs." : mode === 'optimize' ? "Optimize performance." : "Generate code.";
+      modeInstruction = "Generate clean, production-ready code based on the prompt.";
     }
 
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
-      contents: `Role: Senior Software Engineer. 
-      Action: ${modeInstruction}
-      Lang/Framework: ${language} ${framework || ''}.
-      Input: "${prompt}".
+      contents: `Role: Senior Software Engineer / Solutions Architect.
+      Context: Language is ${language}${framework ? `, Framework is ${framework}` : ''}.
+      Goal: ${modeInstruction}
+      Input: "${prompt}"
       
-      Requirements:
-      1. Explanation must be in professional Arabic.
-      2. Explanation should include: Summary, Logic, and Tech Concepts.
-      3. For 'evolve', provide all 3 stages.
-      4. For 'review', list specific feedbacks in Arabic.`,
+      Response Requirements:
+      1. Write the 'explanation' and 'detectedErrors' in professional technical Arabic.
+      2. Ensure the code follows industry best practices.
+      3. Provide a list of 'improvements' for future scalability.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -142,15 +127,14 @@ export const processDevCode = async (
           },
           required: requiredFields,
         },
-        // Thinking budget is appropriate for Gemini 3 Pro
-        thinkingConfig: { thinkingBudget: 12000 }
+        thinkingConfig: { thinkingBudget: 16000 }
       },
     });
 
-    // Use .text property directly as per guidelines
     return response.text ? JSON.parse(response.text) : null;
-  } catch (error) {
-    console.error("Code Process Error:", error);
-    throw new Error("حدث خطأ أثناء معالجة طلبك البرمجي.");
+  } catch (error: any) {
+    console.error("Code Generation Error:", error);
+    // Rethrow to be caught by the component
+    throw error;
   }
 };
