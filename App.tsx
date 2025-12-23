@@ -4,15 +4,16 @@ import { Header } from './components/Header';
 import { TermCard } from './components/TermCard';
 import { DetailModal } from './components/DetailModal';
 import { CodeGenerator } from './components/CodeGenerator';
+import { OllamaHub } from './components/OllamaHub';
 import { INITIAL_TERMS } from './constants';
-import { Term, TermCategory } from './types';
-import { Search, Sparkles, Loader2, BookOpen, Cpu, Globe2, TrendingUp, X } from 'lucide-react';
+import { Term, TermCategory, AppTab } from './types';
+import { Search, Sparkles, Loader2, BookOpen, Cpu, Globe2, TrendingUp, X, Server } from 'lucide-react';
 import { fetchTermDefinition } from './services/geminiService';
 
 const SUGGESTIONS = ['Containerization', 'Serverless', 'DevOps', 'Machine Learning', 'Quantum Computing'];
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dictionary' | 'code'>('dictionary');
+  const [activeTab, setActiveTab] = useState<AppTab>('dictionary');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTerm, setSelectedTerm] = useState<Term | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -109,35 +110,46 @@ const App: React.FC = () => {
       <Header onSearchFocus={() => searchInputRef.current?.focus()} />
 
       <main className="max-w-5xl mx-auto px-4 pt-10">
-        {/* Navigation Tabs - Simplified to avoid overlaps */}
+        {/* Navigation Tabs - Added Ollama Hub */}
         <div className="flex justify-center mb-12">
-          <div className="inline-flex p-1 bg-white rounded-2xl shadow-md border border-slate-200">
+          <div className="inline-flex p-1 bg-white rounded-2xl shadow-md border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
             <button
               onClick={() => setActiveTab('dictionary')}
-              className={`flex items-center gap-2 px-8 py-3 rounded-xl text-lg font-bold transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-bold transition-all whitespace-nowrap ${
                 activeTab === 'dictionary'
                   ? 'bg-indigo-600 text-white shadow-lg'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <BookOpen size={20} />
+              <BookOpen size={18} />
               القاموس
             </button>
             <button
               onClick={() => setActiveTab('code')}
-              className={`flex items-center gap-2 px-8 py-3 rounded-xl text-lg font-bold transition-all ${
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-bold transition-all whitespace-nowrap ${
                 activeTab === 'code'
                   ? 'bg-indigo-600 text-white shadow-lg'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <Cpu size={20} />
+              <Cpu size={18} />
               المطور
+            </button>
+            <button
+              onClick={() => setActiveTab('ollama')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-bold transition-all whitespace-nowrap ${
+                activeTab === 'ollama'
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Server size={18} />
+              مختبر Ollama
             </button>
           </div>
         </div>
 
-        {activeTab === 'dictionary' ? (
+        {activeTab === 'dictionary' && (
           <div className="animate-in fade-in duration-500">
             <div className="mb-10 max-w-4xl mx-auto">
               <div className="relative shadow-xl rounded-3xl bg-white border border-slate-200 focus-within:ring-4 focus-within:ring-indigo-100 transition-all overflow-hidden">
@@ -200,9 +212,10 @@ const App: React.FC = () => {
               ))}
             </div>
           </div>
-        ) : (
-          <CodeGenerator />
         )}
+
+        {activeTab === 'code' && <CodeGenerator />}
+        {activeTab === 'ollama' && <OllamaHub />}
       </main>
 
       <DetailModal 

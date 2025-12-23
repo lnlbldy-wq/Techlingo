@@ -18,6 +18,8 @@ export enum TermCategory {
   CLOUD = 'سحابة'
 }
 
+export type AppTab = 'dictionary' | 'code' | 'ollama';
+
 export type DevMode = 'generate' | 'fix' | 'optimize' | 'refactor' | 'review' | 'evolve';
 
 export interface CodeAiResponse {
@@ -30,11 +32,6 @@ export interface CodeAiResponse {
     optimized: string;
     enterprise: string;
   };
-  reviewFeedbacks?: {
-    line: string;
-    comment: string;
-    type: 'security' | 'performance' | 'style';
-  }[];
 }
 
 export interface AiResponse {
