@@ -1,80 +1,156 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { AiResponse } from '../types';
+import { AiResponse, CodeAiResponse, DevMode, TranslationResponse } from '../types';
 
-// Helper to get AI instance safely when needed
+/**
+ * Creates a new GoogleGenAI instance using the API_KEY from environment variables.
+ * Following guidelines to always use named parameter and direct process.env reference.
+ */
 const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey || apiKey === 'undefined') {
-    throw new Error("مفتاح API غير موجود. يرجى التأكد من إضافته في إعدادات Vercel (Environment Variables) وإعادة النشر.");
-  }
-
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 export const fetchTermDefinition = async (term: string): Promise<AiResponse | null> => {
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Explain the technical term "${term}" for a middle school student in simple Arabic.
-      If the term is not technical or computer related, return a polite message in the definition saying it's not found.
-      `,
+      model: "gemini-3-flash-preview",
+      contents: `You are a Senior Technical Architect. Explain: "${term}".
+      Include the English technical name, Arabic definition, and a professional real-world analogy.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            arabicTerm: {
-              type: Type.STRING,
-              description: "The Arabic translation of the term",
-            },
-            definition: {
-              type: Type.STRING,
-              description: "A simple explanation in Arabic suitable for students",
-            },
-            example: {
-              type: Type.STRING,
-              description: "A real-world simple example in Arabic",
-            },
-            category: {
-              type: Type.STRING,
-              description: "The category of the term (e.g., Programming, AI, Hardware, General)",
-            },
+            arabicTerm: { type: Type.STRING },
+            definition: { type: Type.STRING },
+            example: { type: Type.STRING },
+            category: { type: Type.STRING },
           },
           required: ["arabicTerm", "definition", "example", "category"],
         },
       },
     });
-
-    if (response.text) {
-      return JSON.parse(response.text) as AiResponse;
-    }
-    return null;
-  } catch (error: any) {
-    console.error("Error fetching definition from Gemini:", error);
-    throw new Error(error.message || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي");
+    // Use .text property directly as per guidelines
+    return response.text ? JSON.parse(response.text) : null;
+  } catch (error) {
+    console.error("Gemini Error:", error);
+    throw new Error("فشل الوصول للموسوعة التقنية.");
   }
 };
 
-export const generateCode = async (prompt: string): Promise<string | null> => {
+export const translateToEnglish = async (term: string, definition: string, example: string): Promise<TranslationResponse | null> => {
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `You are an expert programmer assistant for students.
-      The user will ask you to write code.
-      Task: Write clean, error-free, and well-commented code for the following request: "${prompt}".
+      model: "gemini-3-flash-preview",
+      contents: `Translate the following technical Arabic description of the term "${term}" into professional technical English:
+      Definition: ${definition}
+      Example: ${example}
+      
+      Return as JSON with keys 'enDefinition' and 'enExample'.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            enDefinition: { type: Type.STRING },
+            enExample: { type: Type.STRING },
+          },
+          required: ["enDefinition", "enExample"],
+        },
+      },
+    });
+    // Use .text property directly as per guidelines
+    return response.text ? JSON.parse(response.text) : null;
+  } catch (error) {
+    console.error("Translation Error:", error);
+    throw new Error("فشل في الترجمة.");
+  }
+};
+
+export const processDevCode = async (
+  prompt: string, 
+  mode: DevMode, 
+  language: string,
+  framework?: string
+): Promise<CodeAiResponse | null> => {
+  try {
+    const ai = getAiClient();
+    
+    let modeInstruction = "";
+    let extraSchema: any = {};
+    let requiredFields = ["code", "explanation"];
+
+    if (mode === 'evolve') {
+      modeInstruction = "Show code evolution in 3 stages: Basic, Optimized, and Enterprise-ready.";
+      extraSchema = {
+        evolution: {
+          type: Type.OBJECT,
+          properties: {
+            basic: { type: Type.STRING },
+            optimized: { type: Type.STRING },
+            enterprise: { type: Type.STRING }
+          },
+          required: ["basic", "optimized", "enterprise"]
+        }
+      };
+      requiredFields.push("evolution");
+    } else if (mode === 'review') {
+      modeInstruction = "Perform a deep code review identifying security, performance, and style issues.";
+      extraSchema = {
+        reviewFeedbacks: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              line: { type: Type.STRING },
+              comment: { type: Type.STRING },
+              type: { type: Type.STRING }
+            },
+            required: ["line", "comment", "type"]
+          }
+        }
+      };
+      requiredFields.push("reviewFeedbacks");
+    } else {
+      modeInstruction = mode === 'fix' ? "Fix bugs." : mode === 'optimize' ? "Optimize performance." : "Generate code.";
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-preview",
+      contents: `Role: Senior Software Engineer. 
+      Action: ${modeInstruction}
+      Lang/Framework: ${language} ${framework || ''}.
+      Input: "${prompt}".
       
       Requirements:
-      1. Provide ONLY the code and very brief comments.
-      2. Do not wrap the output in markdown code blocks (like \`\`\`), just return the raw text/code so I can display it directly.
-      3. If the language is not specified, infer it or default to Python or HTML/JS depending on context.
-      4. Ensure the code works 100%.`,
+      1. Explanation must be in professional Arabic.
+      2. Explanation should include: Summary, Logic, and Tech Concepts.
+      3. For 'evolve', provide all 3 stages.
+      4. For 'review', list specific feedbacks in Arabic.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            code: { type: Type.STRING },
+            explanation: { type: Type.STRING },
+            detectedErrors: { type: Type.STRING },
+            improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
+            ...extraSchema
+          },
+          required: requiredFields,
+        },
+        // Thinking budget is appropriate for Gemini 3 Pro
+        thinkingConfig: { thinkingBudget: 12000 }
+      },
     });
-    return response.text || null;
-  } catch (error: any) {
-    console.error("Error generating code:", error);
-    throw new Error(error.message || "حدث خطأ أثناء توليد الكود");
+
+    // Use .text property directly as per guidelines
+    return response.text ? JSON.parse(response.text) : null;
+  } catch (error) {
+    console.error("Code Process Error:", error);
+    throw new Error("حدث خطأ أثناء معالجة طلبك البرمجي.");
   }
 };
